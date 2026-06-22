@@ -2,6 +2,12 @@
 __pycache__/
 *.py[codz]
 *$py.class
+*.py[cod]
+.venv/
+venv/
+ENV/
+env/
+.env
 
 # C extensions
 *.so
@@ -216,3 +222,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# === Banco de Dados (MySQL / Local) ===
+*.sql.gz
+*.sql.bak
+# Se você rodar o MySQL via Docker e mapear uma pasta local de dados:
+.db_data/
+mysql_data/
+
+# === IDEs e Editores de Código ===
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# === Sistema Operacional ===
+.DS_Store
+Thumbs.db
+
+# === JavaScript / Node (Se usar pacotes JS no futuro) ===
+node_modules/
+npm-debug.log*
+yarn-error.log*
