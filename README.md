@@ -1,7 +1,7 @@
 # Centro de Referência UESPI
 
 ## Estrutura do projeto
-
+```
 ├── .venv/                  # Ambiente virtual do Python
 ├── app/                    # Pasta principal da aplicação
 │   ├── __init__.py         # Inicializador do módulo Python
@@ -16,3 +16,4 @@
 ├── LICENSE                 # Licença do projeto (MIT)
 ├── README.md               # Documentação principal
 └── requirements.txt        # Dependências do projeto (FastAPI, SQLAlchemy, etc.)
+```
