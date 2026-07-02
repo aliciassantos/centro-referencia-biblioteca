@@ -35,4 +35,26 @@ Este documento registra as decisões tomadas em conjunto com a orientação do p
 
 - Subi uma conexão FastAPI + SQLAlchemy + MySQL local, com uma rota de "health check" para testar se está tudo ok
 
-- Para a fase 1 ainda configurar o Alembic e gerar a primeira migration a partir do DDL revisado e rodar a migration do zero em um banco vazio para confirmar que cria tudo corretamente
+- Configurei o Alembic e gerei a primeira migration a partir do DDL revisado 
+
+- Rodei a migration em um banco vazio para testar a criação
+
+Como o uvicorn abre corretamente, exibindo a rota de health check e o banco existe criado via migration, a fase 1 está concluída.
+
+
+### 📋 Mapeamento de Schemas (Pydantic) — Fase 2
+
+Essa é a parte inicial dos schemas com o Pydantic, sujeitas a alteração no futuro
+
+- [ ] **Módulo: Usuário e Autenticação**
+  - Schema de Entrada (`UsuarioCreate`): `login`, `senha` *(com validações de tamanho/espaço)*
+  - Schema de Saída (`UsuarioResponse`): `id`, `login`, `nivel_acesso_id`, `ativo`, `data_criacao`
+
+- [ ] **Módulo: Tópicos (Categorias)**
+  - Schema de Entrada (`TopicoCreate`): `nome`, `publico`
+  - Schema de Saída (`TopicoResponse`): `id`, `nome`, `publico`
+
+- [ ] **Módulo: Instruções (Rotinas)**
+  - Schema de Entrada (`InstrucaoCreate`): `titulo`, `conteudo`, `nivel_acesso_id`, `url_apoio`
+  - Schema de Saída (`InstrucaoResponse`): `id`, `titulo`, `conteudo`, `data_atualizacao`, `data_criacao`, `nivel_acesso_id`, `usuario_id`, `usuario_atualizou_id`, `ativo`
+

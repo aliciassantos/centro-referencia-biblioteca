@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy import engine, create_engine, select, text
 from sqlalchemy.orm import Session, DeclarativeBase, Mapped, mapped_column
-from database import SessionLocal
+from app.database import SessionLocal, engine
+from app.models import Base
 from pydantic import BaseModel
 
 # Inicializa o framework
