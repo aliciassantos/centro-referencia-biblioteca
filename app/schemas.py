@@ -2,12 +2,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, String, DateTime, Boolean
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from datetime import datetime
-from app.database import engine, Base
-from app.models import Base
 
-
-SessionLocal = sessionmaker(bind=engine)
 
 # - [ ] **Módulo: Usuário e Autenticação**
 #   - Schema de Entrada (`UsuarioCreate`): `login`, `senha` *(com validações de tamanho/espaço)*
@@ -66,6 +61,7 @@ class InstrucaoResponse(BaseModel):
     data_atualizacao: datetime
     data_criacao: datetime
     nivel_acesso_id: int | None
+    usuario_id: int | None
     usuario_atualizou_id: int | None
     ativo: bool
 

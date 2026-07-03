@@ -58,3 +58,5 @@ Essa é a parte inicial dos schemas com o Pydantic, sujeitas a alteração no fu
   - Schema de Entrada (`InstrucaoCreate`): `titulo`, `conteudo`, `nivel_acesso_id`, `url_apoio`
   - Schema de Saída (`InstrucaoResponse`): `id`, `titulo`, `conteudo`, `data_atualizacao`, `data_criacao`, `nivel_acesso_id`, `usuario_id`, `usuario_atualizou_id`, `ativo`
 
+Inseri dados de testes em um novo arquivo (seed.py), juntamente com outro arquivo para testar as queries (testar_queries.py)
+Assim, é possível, em um script solto, importar os models e fazer queries que retornam dados reais do banco.
