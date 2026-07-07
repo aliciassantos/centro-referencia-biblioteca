@@ -60,3 +60,19 @@ Essa é a parte inicial dos schemas com o Pydantic, sujeitas a alteração no fu
 
 Inseri dados de testes em um novo arquivo (seed.py), juntamente com outro arquivo para testar as queries (testar_queries.py)
 Assim, é possível, em um script solto, importar os models e fazer queries que retornam dados reais do banco.
+
+### 📋 Autenticação e Autorização — Fase 3
+
+- Para essa fase, criei um arquivo (security.py) para a criação e validação de senhas e tokens. As senhas são trasnformadas em hash utilizando o bcrypt, evitando salvá-las em texto puro no banco de dados
+
+- A rota de login foi feita utilizando JWT, pois economiza o armazenamento de dados em memória
+
+- Criei uma identificação do usuário para proteger rotas
+
+- Adicionada uma lógica que exibe as instruções conforme o nível de acesso
+
+- Apenas administradores conseguem criar, atualizar e deletar instruções, enquanto servidores e administradores têm acesso total à leitura.
+
+- O visitante anônimo só consegue ler as instruções do seu nível
+
+Agora é possível provar, testando, que um usuário sem login não acessa conteúdo restrito, e que tentar editar uma instrução sem estar logado retorna erro 403.
