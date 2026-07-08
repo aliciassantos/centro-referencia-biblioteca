@@ -8,6 +8,7 @@ import bcrypt
 load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 
+
 # Geração de senhas em hash
 def get_password_hash(password: str) -> str:
     # Limpa os espaços em branco da senha
@@ -21,6 +22,7 @@ def get_password_hash(password: str) -> str:
 
     return hash_bytes.decode("utf-8")
 
+
 # Verificação de identidade
 def verify_password(entry_password: str, password_hash: str) -> bool:
     try:
@@ -30,17 +32,15 @@ def verify_password(entry_password: str, password_hash: str) -> bool:
     except:
         return False
 
+
 # Geração de um token de acesso utilizando JWT
 def generate_token(user_id: int) -> str:
     duration = timedelta(minutes=45)
     # "sub" -> identificação do usuário
     # "exp" -> tempo de validez do token
-    payload = {
-        "sub" : str(user_id),
-        "exp" : datetime.now(timezone.utc) + duration
-    }  
+    payload = {"sub": str(user_id), "exp": datetime.now(timezone.utc) + duration}
     return jwt.encode(payload, key=SECRET_KEY, algorithm="HS256")
+
 
 def verify_token(token: str):
     return jwt.decode(token, key=SECRET_KEY, algorithms=["HS256"])
-

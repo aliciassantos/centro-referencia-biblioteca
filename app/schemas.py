@@ -18,7 +18,8 @@ class UsuarioCreate(BaseModel):
             raise ValueError("O login não pode conter espaços em branco.")
         return v
 
-#   - Schema de Saída (`UsuarioResponse`): `id`, `login`, `nivel_acesso_id`, 
+
+#   - Schema de Saída (`UsuarioResponse`): `id`, `login`, `nivel_acesso_id`,
 # `ativo`, `data_criacao`
 class UsuarioResponse(BaseModel):
     id: int
@@ -29,11 +30,13 @@ class UsuarioResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 # - [ ] **Módulo: Tópicos (Categorias)**
 #   - Schema de Entrada (`TopicoCreate`): `nome`, `publico`
 class TopicoCreate(BaseModel):
     nome: str = Field(max_length=100)
     publico: bool
+
 
 #   - Schema de Saída (`TopicoResponse`): `id`, `nome`, `publico`
 class TopicoResponse(BaseModel):
@@ -43,6 +46,7 @@ class TopicoResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+
 # - [ ] **Módulo: Instruções (Rotinas)**
 #   - Schema de Entrada (`InstrucaoCreate`): `titulo`, `conteudo`,
 #   `nivel_acesso_id`, `url_apoio`
@@ -51,6 +55,7 @@ class InstrucaoCreate(BaseModel):
     conteudo: str
     nivel_acesso_id: int
     url_apoio: str | None = None
+
 
 #   - Schema de Saída (`InstrucaoResponse`): `id`, `titulo`, `conteudo`, `data_atualizacao`,
 #  `data_criacao`, `nivel_acesso_id`, `usuario_id`, `usuario_atualizou_id`, `ativo`
@@ -66,4 +71,3 @@ class InstrucaoResponse(BaseModel):
     ativo: bool
 
     model_config = ConfigDict(from_attributes=True)
-

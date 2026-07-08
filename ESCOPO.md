@@ -76,3 +76,20 @@ Assim, é possível, em um script solto, importar os models e fazer queries que 
 - O visitante anônimo só consegue ler as instruções do seu nível
 
 Agora é possível provar, testando, que um usuário sem login não acessa conteúdo restrito, e que tentar editar uma instrução sem estar logado retorna erro 403.
+
+### 📋 CRUD de instruções — Fase 4
+
+Para essa fase, comecei implementando queries de busca no arquivo crud.py para serem utilizadas na main.py
+
+Algumas das rotas feitas por enquanto: 
+
+- GET /instrucoes para listar as instruções respeitando o nível de acesso
+
+- GET /instrucoes/{instruction_id} para buscar uma instrução específica
+
+- POST /instrucoes para administradores criarem novas instruções
+
+- PUT /instrucoes/{instruction_id} para administradores atualizarem instruções
+
+- DELETE /instrucoes/{instruction_id} para administradores deletarem instruções. O delete só remove o estado ativo da função, não removendo fisicamente
+
