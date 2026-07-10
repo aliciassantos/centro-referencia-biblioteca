@@ -1,15 +1,9 @@
 from sqlalchemy import (
-    Column,
-    Integer,
     String,
-    Boolean,
     ForeignKey,
-    DateTime,
-    create_engine,
-    select,
     Text,
 )
-from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column, Session
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 from app.database import Base
 from datetime import datetime
@@ -146,9 +140,11 @@ class InstrucaoTopico(Base):
     __tablename__ = "instrucao_topico"
 
     instrucao_id: Mapped[int] = mapped_column(
-        ForeignKey("instrucao.id"), primary_key=True
+        ForeignKey("instrucao.id", ondelete="CASCADE"), primary_key=True
     )
-    topico_id: Mapped[int] = mapped_column(ForeignKey("topico.id"), primary_key=True)
+    topico_id: Mapped[int] = mapped_column(
+        ForeignKey("topico.id", ondelete="CASCADE"), primary_key=True
+    )
 
     # Relacionamentos:
     # InstrucaoTopico refere-se a uma instrução e a um topico por vez (1:N)
@@ -195,7 +191,7 @@ class InstrucaoMidia(Base):
         ForeignKey("instrucao.id"), primary_key=True
     )
     midia_id: Mapped[int] = mapped_column(ForeignKey("midia.id"), primary_key=True)
-
+    ordem_exibicao: Mapped[int] = mapped_column(nullable=False)
     # Relacionamentos:
     # InstrucaoMidia refere-se a uma instrução e a uma midia por vez (1:N)
     instrucao: Mapped[Instrucao] = relationship(
