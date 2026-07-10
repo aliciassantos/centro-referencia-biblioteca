@@ -34,7 +34,7 @@ def get_current_user(
     except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
     # Busca o usuário com base no id do token, caso ele seja válido
-    user = crud.search_item_by_id(models.Usuario, models.Usuario.id, db)
+    user = crud.search_item_by_id(models.Usuario, user_id, db)
     if user:
         return user
     else:
@@ -127,7 +127,7 @@ def create_instruction(
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
-    crud.create_new_instruction(instruction, db)
+    crud.create_new_instruction(instruction, db, current_user.id)
     return {"status": "Instrução criada com sucesso!"}
 
 
@@ -145,7 +145,7 @@ def update_instruction(
 
     # Procura a instrução no banco de dados
     instruction_to_be_updated = crud.update_an_instruction(
-        instruction_form, db, instruction_id
+        instruction_form, db, instruction_id, current_user.id
     )
 
     if not instruction_to_be_updated:

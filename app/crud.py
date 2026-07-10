@@ -15,9 +15,9 @@ def search_item_by_id(entity: type, id: int, db: Session):
 # CRUD DE USUÁRIO
 # ====================================
 # Busca um usuário com base em seu login
-def search_user_by_login(db: Session, form_data: str):
+def search_user_by_login(db: Session, username: str):
     return db.scalars(
-        select(models.Usuario).where(form_data.username == models.Usuario.login)
+        select(models.Usuario).where(username == models.Usuario.login)
     ).first()
 
 
@@ -43,13 +43,16 @@ def get_instruction_by_access_level(db: Session, level_access_id: int):
 
 
 # Adiciona uma nova instrução (Restrito a administradores)
-def create_new_instruction(instruction: schemas.InstrucaoCreate, db: Session):
+def create_new_instruction(
+    instruction: schemas.InstrucaoCreate, db: Session, user_id: int
+):
     # Instancia nova instrução e adiciona ao banco
     new_instruction = models.Instrucao(
         titulo=instruction.titulo,
         conteudo=instruction.conteudo,
         nivel_acesso_id=instruction.nivel_acesso_id,
         url_apoio=instruction.url_apoio,
+        usuario_id=user_id,
     )
 
     db.add(new_instruction)
@@ -59,7 +62,7 @@ def create_new_instruction(instruction: schemas.InstrucaoCreate, db: Session):
 
 # Atualiza uma instrução (Restrito a administradores)
 def update_an_instruction(
-    instruction: schemas.InstrucaoCreate, db: Session, instruction_id: int
+    instruction: schemas.InstrucaoCreate, db: Session, instruction_id: int, user_id: int
 ):
     # Procura a instrução no banco de dados
     instruction_to_be_updated = search_item_by_id(models.Instrucao, instruction_id, db)
@@ -73,6 +76,7 @@ def update_an_instruction(
     for key, value in update_data.items():
         setattr(instruction_to_be_updated, key, value)
 
+    instruction_to_be_updated.usuario_atualizou_id = user_id
     db.commit()
     db.refresh(instruction_to_be_updated)
     return instruction_to_be_updated
