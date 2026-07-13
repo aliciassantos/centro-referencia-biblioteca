@@ -71,3 +71,10 @@ class InstrucaoResponse(BaseModel):
     ativo: bool
 
     model_config = ConfigDict(from_attributes=True)
+
+
+#   - Schema de Saída (`MidiaResponse`): `id`, `legenda`, `caminho_arquivo`
+class MidiaResponse(BaseModel):
+    id: int
+    legenda: str | None
+    caminho_arquivo: str

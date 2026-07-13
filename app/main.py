@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from pathlib import Path
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError, DataError
 from app import database, models, security, schemas, crud
 
 # Inicializa o framework
@@ -20,12 +21,15 @@ def get_db():
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
 
-# Dependência que tranca as rotas restritas aos servidores
 def get_current_user(
     token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
 ):
-    # Verifica a validade do token
-    # Se não tiver token, é um usuário comum (discente)
+    """
+    Dependência que identifica quem é o usuário atual (se houver um)
+
+    Verifica a validade do token. Caso não haja um, o usuário possui acesso público
+    Caso haja um token, verifica-o e capta o usuário atual
+    """
     if token is None:
         return None
     try:
@@ -33,7 +37,7 @@ def get_current_user(
         user_id = int(payload["sub"])
     except Exception:
         raise HTTPException(status_code=401, detail="Token inválido")
-    # Busca o usuário com base no id do token, caso ele seja válido
+
     user = crud.search_item_by_id(models.Usuario, user_id, db)
     if user:
         return user
@@ -46,18 +50,14 @@ def home():
     return {"status": "Página Inicial :)"}
 
 
-# Rota de criação de um novo usuário
 @app.post("/usuarios")
 def create_user(new_user: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    # Gera o hash da senha de forma segura
+    """
+    Adição de um novo usuário ao banco de dados.
+    Geração de senha em hash para salvar no banco de dados de forma segura.
+    """
     hash_password = security.get_password_hash(new_user.senha)
-    # Instancia o novo usuário
-    user = models.Usuario(
-        login=new_user.login, senha_hash=hash_password, nivel_acesso_id=2
-    )
-    # Salva no banco de dados
-    db.add(user)
-    db.commit()
+    crud.create_new_user(new_user.login, hash_password, 2, db)
 
     return {"status": "Usuário criado com sucesso!"}
 
@@ -83,30 +83,34 @@ def login_for_access_token(
 # ====================================
 # ROTAS DE INSTRUÇÕES
 # ====================================
-# Lista as instruções de acordo com o nivel de acesso
-@app.get("/instrucoes")
+@app.get("/instrucoes", tags=["Instruções"])
 def show_instructions(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    if current_user == None:
-        # Para usuários comuns, retorna instruções de acesso livre
+    """
+    Lista todas as instruções. Exibe o resultado de acordo com o nível de acesso.
+
+    Para usuários comuns, expõe apenas instruções públicas que não exigem nível de acesso.
+    Para servidores, todas as instruções ativas.
+    """
+    if current_user is None:
         return crud.get_instruction_by_access_level(db, 1)
-    # Para servidores, retorna todas as instruções
     return crud.get_instruction_by_access_level(db, 3)
 
 
-# Busca por uma instrução específica
-@app.get("/instrucoes/{instruction_id}")
+@app.get("/instrucoes/{instruction_id}", tags=["Instruções"])
 def search_a_specific_instruction(
     instruction_id: int,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    # Se for visitante anônimo, passa o nível 1
-    if current_user == None:
+    """
+    Busca por uma instrução específica. Exibe o resultado de acordo com o nível de acesso.
+    Uma instrução pode existir e não ser exposta a um usuário se o seu nível de acesso não permitir.
+    """
+    if current_user is None:
         instruction = crud.search_an_instruction(instruction_id, db, 1)
-    # Se estiver logado, passa o nível do usuário
     else:
         instruction = crud.search_an_instruction(
             instruction_id, db, current_user.nivel_acesso_id
@@ -116,14 +120,16 @@ def search_a_specific_instruction(
     return instruction
 
 
-# Rota para criar nova instrução (Restrita a servidores administradores)
-@app.post("/instrucoes")
+@app.post("/instrucoes", tags=["Instruções"])
 def create_instruction(
     instruction: schemas.InstrucaoCreate,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    # Somente os servidores administradores podem adicionar novas instruções
+    """
+    Adiciona uma nova instrução ao banco de dados. Apenas administradores podem realizar
+    essa operação.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
@@ -131,19 +137,20 @@ def create_instruction(
     return {"status": "Instrução criada com sucesso!"}
 
 
-# Rota para atualizar instrução (Restrita a servidores administradores)
-@app.put("/instrucoes/{instruction_id}")
+@app.put("/instrucoes/{instruction_id}", tags=["Instruções"])
 def update_instruction(
     instruction_id: int,
     instruction_form: schemas.InstrucaoCreate,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    # Somente os servidores administradores podem atualizar instruções
+    """
+    Atualiza uma instrução no banco de dados. Apenas administradores podem realizar
+    essa operação.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
-    # Procura a instrução no banco de dados
     instruction_to_be_updated = crud.update_an_instruction(
         instruction_form, db, instruction_id, current_user.id
     )
@@ -154,19 +161,20 @@ def update_instruction(
     return {"status": "Instrução atualizada com sucesso!"}
 
 
-# Rota para deletar instrução (Restrita a servidores administradores)
-@app.delete("/instrucoes/{instruction_id}")
+@app.delete("/instrucoes/{instruction_id}", tags=["Instruções"])
 def delete_instruction(
     instruction_id: int,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-
-    # Somente os servidores administradores podem deletar instruções
+    """
+    Deleta uma instrução do banco de dados.
+    A exclusão não remove a instrução permanentemente, apenas a torna inativa (soft delete).
+    Apenas administradores podem realizar essa operação.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
-    # Busca a instrução a ser deletada no banco
     instruction_to_be_deleted = crud.delete_an_instruction(instruction_id, db)
 
     if not instruction_to_be_deleted:
@@ -178,17 +186,20 @@ def delete_instruction(
 # ====================================
 # ROTAS DE TÓPICOS
 # ====================================
-# Listagem de tópicos existentes
-@app.get("/topicos", response_model=list[schemas.TopicoResponse])
+@app.get("/topicos", response_model=list[schemas.TopicoResponse], tags=["Tópicos"])
 def show_topics(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
+    """
+    Listagem de tópicos baseada no nível de acesso do usuário.
+
+    Para usuários não logados, retorna tópicos com nível de acesso público
+    Para os logados, retorna todos os tópicos
+    """
     if current_user == None:
-        # Para usuários comuns, retorna instruções de acesso livre
         topics = crud.get_topics_by_access_level(db, True)
     else:
-        # Para servidores, retorna todas as instruções
         topics = crud.get_topics_by_access_level(db, False)
 
     if not topics:
@@ -196,15 +207,16 @@ def show_topics(
     return topics
 
 
-# Rota para criar novo Tópico (Restrita a servidores administradores)
-@app.post("/topicos")
+@app.post("/topicos", tags=["Tópicos"])
 def create_topic(
     topic: schemas.TopicoCreate,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-
-    # Somente os servidores administradores podem adicionar novos tópicos
+    """
+    Adiciona um novo tópico ao banco de dados. Apenas administradores podem realizar
+    essa operação.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
@@ -212,18 +224,20 @@ def create_topic(
     return {"status": "Tópico criado com sucesso!"}
 
 
-@app.put("/topicos/{topic_id}")
+@app.put("/topicos/{topic_id}", tags=["Tópicos"])
 def update_topic(
     topic_id: int,
     topic_form: schemas.TopicoCreate,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    # Somente os servidores administradores podem atualizar tópicos
+    """
+    Atualiza um tópico do banco de dados. Apenas administradores podem realizar
+    essa operação.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
-    # Procura o tópico no banco de dados
     topic_to_be_updated = crud.update_an_topic(topic_form, db, topic_id)
 
     if not topic_to_be_updated:
@@ -232,18 +246,19 @@ def update_topic(
     return {"status": "Tópico atualizado com sucesso!"}
 
 
-@app.delete("/topicos/{topic_id}")
-def delete_topic(
+@app.delete("/topicos/{topic_id}", tags=["Tópicos"])
+def delete_a_topic(
     topic_id: int,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-
-    # Somente os servidores administradores podem deletar tópicos
+    """
+    Remove um tópico do banco de dados. Apenas administradores podem realizar
+    essa operação.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
-    # Busca o tópico a ser deletado no banco
     topic_to_be_deleted = crud.delete_an_topic(topic_id, db)
 
     if not topic_to_be_deleted:
@@ -256,15 +271,18 @@ def delete_topic(
 # ROTAS DE RELACIONAMENTO ENTRE
 # ENTIDADES
 # ====================================
-# Cria um vínculo de um tópico a uma instrução
-@app.post("/instrucoes/{instruction_id}/topicos/{topic_id}")
+@app.post("/instrucoes/{instruction_id}/topicos/{topic_id}", tags=["Relacionamentos"])
 def link_entities(
     instruction_id: int,
     topic_id: int,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
-    # Somente os servidores administradores podem vincular topicos a instruções
+    """
+    Associa um tópico a uma instrução com os IDs fornecidos.
+
+    Apenas usuários administradores (nível 3) têm permissão para vincular.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
@@ -272,64 +290,116 @@ def link_entities(
     return {"status": "Associação realizada com sucesso!"}
 
 
-# Deleta um vínculo entre um tópico e uma instrução
-@app.delete("/instrucoes/{instruction_id}/topicos/{topic_id}")
+@app.delete("/instrucoes/{instruction_id}/topicos/{topic_id}", tags=["Relacionamentos"])
 def remove_link_entities(
     instruction_id: int,
     topic_id: int,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
+    """
+    Remove a associação entre um tópico e uma instrução.
 
-    # Somente os servidores administradores podem vincular topicos a instruções
+    Exclui o vínculo existente entre os IDs fornecidos.
+    Apenas usuários administradores (nível 3) têm permissão.
+    Retorna 404 caso a relação informada não seja encontrada no banco.
+    """
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
-
-    # Remove a relação
-    instruction_topic = crud.delete_link_topics_instructions(
-        instruction_id, topic_id, db
-    )
-
-    if not instruction_topic:
-        raise HTTPException(status_code=404, detail="Relação não encontrada")
-
+    try:
+        instruction_topic = crud.delete_link_topics_instructions(
+            instruction_id, topic_id, db
+        )
+        if not instruction_topic:
+            raise HTTPException(status_code=404, detail="Relação não encontrada")
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="Tópico já vinculado à instrução")
     return {"status": "Relação deletada com sucesso!"}
 
 
-# Busca instruções com base em um tópico
 @app.get(
-    "/topicos/{topic_id}/instrucoes", response_model=list[schemas.InstrucaoResponse]
+    "/topicos/{topic_id}/instrucoes",
+    response_model=list[schemas.InstrucaoResponse],
+    tags=["Relacionamentos"],
 )
 def search_instructions_by_topic(
     topic_id: int,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user),
 ):
+    """
+    Busca instruções por tópico.
+
+    Retorna a lista de instruções associadas a um tópico específico.
+    Se o usuário não estiver autenticado (visitante), a busca retornará apenas
+    as instruções públicas (padrão). Se estiver autenticado, retorna o conteúdo completo.
+    """
     if current_user is None:
         return crud.find_instructions_by_topic(topic_id, db, True)
 
     return crud.find_instructions_by_topic(topic_id, db, False)
 
 
-# Ainda em desenvolvimento
-# @app.post("/instrucoes/{instruction_id}/midias")
-# def upload_midia(
-#     instruction_id: int,
-#     db: Session = Depends(get_db),
-#     file: UploadFile = File(...),
-#     ordem_exibicao: int = Form(...),
-#     legenda: str = Form(None) | None,
-#     current_user: models.Usuario = Depends(get_current_user),
-# ):
-#     # Define o caminho da pasta onde as mídias vão ficar
-#     UPLOAD_DIR = Path("uploads/midias")
-#     # Cria a pasta e todas as pastas pai se elas não existirem
-#     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+@app.post("/instrucoes/{instruction_id}/midias/{media_id}", tags=["Relacionamentos"])
+def link_existing_media(
+    instruction_id: int,
+    media_id: int,
+    display_order: int = Form(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Cria um vínculo entre uma mídia existente
+    e uma instrução no banco de dados.
+    """
+    if current_user is None or current_user.nivel_acesso_id != 3:
+        raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
-#     # Salva o arquivo com o nome original dele
-#     file_path = UPLOAD_DIR / file.filename
+    try:
+        media_instruction = crud.link_media_to_instruction(
+            media_id, instruction_id, display_order, db
+        )
+        # Caso não nencontre a mídia ou a instrução
+        if not media_instruction:
+            raise HTTPException(status_code=404, detail="Dado não encontrado")
 
-#     # Copia o conteúdo do arquivo recebido para o destino
-#     with open(file_path, "wb") as buffer:
-#         while content := file.file.read(1024 * 1024):
-#             buffer.write(content)
+        return {"status": "Mídia anexada com sucesso!"}
+    except IntegrityError:
+        raise HTTPException(status_code=400, detail="Mídia já vinculada à instrução")
+
+
+# ====================================
+# ROTAS DE MÍDIA
+# ====================================
+@app.post(
+    "/instrucoes/{instruction_id}/midias",
+    response_model=schemas.MidiaResponse,
+    tags=["Mídias"],
+)
+def upload_midia(
+    instruction_id: int,
+    db: Session = Depends(get_db),
+    file: UploadFile = File(...),
+    display_order: int = Form(...),
+    caption: str | None = Form(None),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """
+    Realiza o upload de um novo arquivo de mídia (imagem, vídeo, etc.)
+    e o associa diretamente a uma instrução existente no banco de dados.
+    """
+    if current_user is None or current_user.nivel_acesso_id != 3:
+        raise HTTPException(status_code=403, detail="Usuário não autorizado")
+
+    UPLOAD_DIR = Path("uploads/midias")
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    file_path = UPLOAD_DIR / file.filename
+
+    with open(file_path, "wb") as buffer:
+        while content := file.file.read(1024 * 1024):
+            buffer.write(content)
+
+    new_media = crud.add_new_midia(
+        str(file_path), caption, instruction_id, display_order, db
+    )
+    return new_media

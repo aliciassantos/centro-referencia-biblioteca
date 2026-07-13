@@ -14,6 +14,17 @@ def search_item_by_id(entity: type, id: int, db: Session):
 # ====================================
 # CRUD DE USUÁRIO
 # ====================================
+def create_new_user(login: str, hash_password: str, access_level: int, db: Session):
+    # Instancia o novo usuário
+    user = models.Usuario(
+        login=login, senha_hash=hash_password, nivel_acesso_id=access_level
+    )
+    # Salva no banco de dados
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+
 # Busca um usuário com base em seu login
 def search_user_by_login(db: Session, username: str):
     return db.scalars(
@@ -234,3 +245,41 @@ def find_instructions_by_topic(topic_id: int, db: Session, is_public: bool):
                 models.InstrucaoTopico.topico_id == topic_id,
             )
         ).all()
+
+
+# Anexa uma mídia a uma instrução
+def link_media_to_instruction(
+    media_id: int, instruction_id: int, display_order: int, db: Session
+):
+    media = search_item_by_id(models.Midia, media_id, db)
+    instruction = search_item_by_id(models.Instrucao, instruction_id, db)
+
+    if not media or not instruction:
+        return None
+
+    # Instancia uma nova associação e adiciona ao banco
+    media_instruction = models.InstrucaoMidia(
+        instrucao_id=instruction_id, midia_id=media_id, ordem_exibicao=display_order
+    )
+
+    db.add(media_instruction)
+    db.commit()
+    db.refresh(media_instruction)
+
+
+# ====================================
+# CRUD DE MÍDIAS
+# ====================================
+# Adiciona uma nova mídia e a vincula à sua respectiva instrução
+def add_new_midia(
+    file_path: str, caption: str, instruction_id: int, display_order: int, db: Session
+):
+    # Instancia uma nova mídia e adiciona ao banco
+    new_media = models.Midia(caminho_arquivo=file_path, legenda=caption)
+
+    db.add(new_media)
+    db.commit()
+    db.refresh(new_media)
+
+    link_media_to_instruction(new_media.id, instruction_id, display_order, db)
+    return new_media
