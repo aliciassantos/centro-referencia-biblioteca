@@ -1,8 +1,4 @@
-from sqlalchemy import (
-    String,
-    ForeignKey,
-    Text,
-)
+from sqlalchemy import String, ForeignKey, Text, Index
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 from app.database import Base
@@ -80,7 +76,7 @@ class Topico(Base):
     nome: Mapped[str] = mapped_column(String(100), nullable=False)
     publico: Mapped[bool] = mapped_column(default=True)
     instrucao_topico: Mapped[list["InstrucaoTopico"]] = relationship(
-        back_populates="topico"
+        back_populates="topico", cascade="all, delete-orphan"
     )
 
 
@@ -91,6 +87,10 @@ Conteúdo Textual das rotinas
 
 class Instrucao(Base):
     __tablename__ = "instrucao"
+    __table_args__ = (
+        (Index("idx_instrucao_titulo", "titulo", mysql_prefix="FULLTEXT")),
+        (Index("idx_instrucao_conteudo", "conteudo", mysql_prefix="FULLTEXT")),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     titulo: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -124,10 +124,10 @@ class Instrucao(Base):
     )
     # 1:N -> uma instrução pode se ligar a várias InstrucaoTopico
     instrucao_topico: Mapped[list["InstrucaoTopico"]] = relationship(
-        back_populates="instrucao"
+        back_populates="instrucao", cascade="all, delete-orphan"
     )
     instrucoes_midias: Mapped[list["InstrucaoMidia"]] = relationship(
-        back_populates="instrucao"
+        back_populates="instrucao", cascade="all, delete-orphan"
     )
 
 
@@ -175,7 +175,7 @@ class Midia(Base):
     )
 
     instrucoes_midias: Mapped[list["InstrucaoMidia"]] = relationship(
-        back_populates="midia"
+        back_populates="midia", cascade="all, delete-orphan"
     )
 
 
@@ -188,9 +188,11 @@ class InstrucaoMidia(Base):
     __tablename__ = "instrucao_midia"
 
     instrucao_id: Mapped[int] = mapped_column(
-        ForeignKey("instrucao.id"), primary_key=True
+        ForeignKey("instrucao.id", ondelete="CASCADE"), primary_key=True
     )
-    midia_id: Mapped[int] = mapped_column(ForeignKey("midia.id"), primary_key=True)
+    midia_id: Mapped[int] = mapped_column(
+        ForeignKey("midia.id", ondelete="CASCADE"), primary_key=True
+    )
     ordem_exibicao: Mapped[int] = mapped_column(nullable=False)
     # Relacionamentos:
     # InstrucaoMidia refere-se a uma instrução e a uma midia por vez (1:N)

@@ -1,95 +1,95 @@
-# Definição de Escopo e Regras de Negócio (Fase 0)
+# 🏛️ Centro de Referência Digital — Biblioteca UESPI
+> **Documento de Escopo, Regras de Negócio e Registro de Desenvolvimento**
 
-Este documento registra as decisões tomadas em conjunto com a orientação do projeto para guiar o desenvolvimento do Centro de Referência Digital da Biblioteca da UESPI.
+Este documento registra as decisões tomadas em conjunto com a orientação do projeto e o histórico de implementação para guiar o desenvolvimento do sistema.
 
-## 1. Perfil de Usuários ("Servidores")
-> **Pergunta:** Quem exatamente vai acessar o painel restrito para criar/editar instruções? Serão apenas os bibliotecários, ou bolsistas/estagiários também terão acesso?
-- [ ] **Decisão:** Os bibliotecários terão acesso à parte administrativa e poderão realizar as operações CRUD nas instruções.
+---
 
-## 2. Políticas de Segurança e Senha
-> **Pergunta:** Existe alguma regra da TI da UESPI para senhas? (Ex: mínimo de 8 caracteres, uso de caracteres especiais, obrigatoriedade de troca a cada X meses?)
-- [ ] **Decisão:** Não existe um padrão definido, mas iremos adotar um para mais segurança.
+## 📋 Fase 0: Definição de Escopo e Regras de Negócio
 
-## 3. Identidade Visual e Interface
-> **Pergunta:** Existe algum manual de marca da UESPI ou um padrão de cores (azul/amarelo) obrigatório que a interface deve seguir? Há alguma exigência estrita de acessibilidade (como alto contraste nativo)?
-- [ ] **Decisão:** Seguiremos com o padrão de cores presentes no site da UESPI, sem alta exigência de acessibilidade.
+### 👥 1. Perfil de Usuários ("Servidores")
+* **Pergunta:** Quem exatamente vai acessar o painel restrito para criar/editar instruções? Serão apenas os bibliotecários, ou bolsistas/estagiários também terão acesso?
+* [x] **Decisão:** Os bibliotecários terão acesso à parte administrativa e poderão realizar as operações CRUD nas instruções.
 
-## 4. Escopo da Primeira Entrega (MVP)
-> **Pergunta:** Para a nossa primeira versão de testes rodando na biblioteca, quais e quantas instruções reais precisam estar cadastradas no banco para o sistema ser considerado útil?
-- [ ] **Decisão:** Pelo menos as intruções principais dos alunos (cerca de 10)
+### 🔒 2. Políticas de Segurança e Senha
+* **Pergunta:** Existe alguma regra da TI da UESPI para senhas?
+* [x] **Decisão:** Não existe um padrão definido pela instituição, mas adotaremos requisitos mínimos de segurança (tamanho e caracteres especiais) no sistema.
 
->**Pergunta:** O que precisa existir na primeira entrega? (ex: "alunos conseguem ler instruções" já é suficiente pra primeira versão, ou ele espera o CRUD completo de servidor já na v1?)
-- [ ] **Decisão:** É importante que os alunos consigam ler as instruções utilizando os filtros de busca por tópico, juntamente com a barra de pesquisa
+### 🎨 3. Identidade Visual e Interface
+* **Pergunta:** Existe algum manual de marca da UESPI ou um padrão de cores obrigatório? Há exigência de acessibilidade estrita?
+* [x] **Decisão:** Seguiremos com a paleta de cores oficial do site da UESPI (Azul e Amarelo), sem requisitos estritos de alta acessibilidade nesta fase.
 
-# Fundação do projeto (Fase 1)
+### 🚀 4. Escopo da Primeira Entrega (MVP)
+* **Pergunta:** Quantas instruções reais precisam estar cadastradas para o sistema ser considerado útil?
+* [x] **Decisão:** Pelo menos as instruções principais voltadas para os alunos (aproximadamente 10 rotinas cadastradas).
+* **Pergunta:** O que precisa existir na primeira entrega?
+* [x] **Decisão:** É essencial que os alunos consigam ler as instruções utilizando filtros de busca por tópico e a barra de pesquisa geral.
 
-- Criei o repositório público, com licença MIT
+---
 
-- Criei o .gitignore, coloquei os arquivos adequados no momento
+## 🛠️ Fase 1: Fundação do Projeto
+* [x] **Repositório:** Criado repositório público com a licença MIT.
+* [x] **Configuração Inicial:** Arquivo `.gitignore` configurado e ambiente virtual (`venv`) ativo.
+* [x] **Estrutura de Pastas:** Arquitetura do projeto padronizada e variáveis de ambiente configuradas.
+* [x] **Banco de Dados:** Conexão estabelecida usando FastAPI + SQLAlchemy + MySQL local com rota de *health check* ativa.
+* [x] **Migrações:** Alembic configurado; primeira migração gerada a partir do DDL revisado e aplicada com sucesso.
 
-- Criei o ambiente virtual Python (venv)
+---
 
-- Defini uma estrutura de pastas inicial para o projeto
+## 📐 Fase 2: Mapeamento de Schemas (Pydantic)
+* [x] **Módulo: Usuário e Autenticação**
+  * Schema de Entrada (`UsuarioCreate`): `login`, `senha` *(com validações de tamanho/espaço)*.
+  * Schema de Saída (`UsuarioResponse`): `id`, `login`, `nivel_acesso_id`, `ativo`, `data_criacao`.
+* [x] **Módulo: Tópicos (Categorias)**
+  * Schema de Entrada (`TopicoCreate`): `nome`, `publico`.
+  * Schema de Saída (`TopicoResponse`): `id`, `nome`, `publico`.
+* [x] **Módulo: Instruções (Rotinas)**
+  * Schema de Entrada (`InstrucaoCreate`): `titulo`, `conteudo`, `nivel_acesso_id`, `url_apoio`.
+  * Schema de Saída (`InstrucaoResponse`): `id`, `titulo`, `conteudo`, `data_atualizacao`, `data_criacao`, `nivel_acesso_id`, `usuario_id`, `usuario_atualizou_id`, `ativo`.
+* [x] **Massa de Testes:** Criação do script de semente (`seed.py`) e script de teste de queries (`testar_queries.py`) para validar operações com dados reais do banco.
 
-- Configurei as variáveis de ambiente
+---
 
-- Subi uma conexão FastAPI + SQLAlchemy + MySQL local, com uma rota de "health check" para testar se está tudo ok
+## 🔑 Fase 3: Autenticação e Autorização
+* [x] **Segurança (`security.py`):** Criptografia de senhas com `bcrypt` (evitando texto puro no banco) e geração/validação de tokens JWT.
+* [x] **Controle de Fluxo:** Implementada a identificação do usuário logado para proteção de rotas privadas.
+* [x] **Níveis de Acesso:**
+  * **Administradores:** Controle total (criar, atualizar e deletar).
+  * **Servidores:** Acesso total à leitura e gerenciamento básico.
+  * **Visitantes anônimos:** Conseguem ler apenas instruções públicas (Nível de acesso 1).
+  * *Validação realizada:* Tentativas de edições não autorizadas retornam corretamente erro `403 Forbidden`.
 
-- Configurei o Alembic e gerei a primeira migration a partir do DDL revisado 
+---
 
-- Rodei a migration em um banco vazio para testar a criação
+## 💾 Fase 4: CRUD de Instruções e Relacionamentos
+Implementação das rotas e lógica de persistência no arquivo `crud.py` com exposição dos endpoints na `main.py`.
 
-Como o uvicorn abre corretamente, exibindo a rota de health check e o banco existe criado via migration, a fase 1 está concluída.
+### 📌 Endpoints de Instruções
+| Método | Endpoint | Descrição | Restrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/instrucoes` | Lista instruções respeitando o nível de acesso | Livre |
+| `GET` | `/instrucoes/{id}` | Busca os detalhes de uma instrução específica | Livre |
+| `POST` | `/instrucoes` | Cria uma nova instrução | Apenas Admin |
+| `PUT` | `/instrucoes/{id}` | Atualiza os dados de uma instrução | Apenas Admin |
+| `DELETE`| `/instrucoes/{id}` | Desativa logicamente uma instrução (`ativo=False`) | Apenas Admin |
+| `GET` | `/instrucoes/busca` | Realiza busca *full-text* (`MATCH...AGAINST`) por título/conteúdo | Livre |
 
+### 🏷️ Endpoints de Tópicos (Categorias)
+| Método | Endpoint | Descrição | Restrição |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/topicos` | Lista tópicos ativos | Livre |
+| `POST` | `/topicos` | Cria um novo tópico | Servidor / Admin |
+| `PUT` | `/topicos/{id}` | Edita as informações de um tópico | Servidor / Admin |
+| `DELETE`| `/topicos/{id}` | Remove um tópico (desvinculando-o das instruções) | Servidor / Admin |
+| `GET` | `/topicos/{id}/instrucoes` | Lista todas as instruções vinculadas a um tópico | Livre |
 
-### 📋 Mapeamento de Schemas (Pydantic) — Fase 2
+### 🔗 Endpoints de Relacionamentos e Mídias
+| Método | Endpoint | Descrição | Restrição |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/instrucoes/{ins_id}/topicos/{top_id}` | Associa um tópico a uma instrução | Servidor / Admin |
+| `DELETE`| `/instrucoes/{ins_id}/topicos/{top_id}` | Remove o vínculo entre tópico e instrução | Servidor / Admin |
+| `POST` | `/instrucoes/{ins_id}/midias/{mid_id}` | Vincula uma mídia existente a uma instrução | Servidor / Admin |
+| `DELETE`| `/instrucoes/{ins_id}/midias/{mid_id}` | Remove a mídia de uma instrução (com *Cascade*) | Servidor / Admin |
+| `POST` | `/instrucoes/{ins_id}/midias` | Faz o upload de uma nova mídia para a instrução | Servidor / Admin |
 
-Essa é a parte inicial dos schemas com o Pydantic, sujeitas a alteração no futuro
-
-- [ ] **Módulo: Usuário e Autenticação**
-  - Schema de Entrada (`UsuarioCreate`): `login`, `senha` *(com validações de tamanho/espaço)*
-  - Schema de Saída (`UsuarioResponse`): `id`, `login`, `nivel_acesso_id`, `ativo`, `data_criacao`
-
-- [ ] **Módulo: Tópicos (Categorias)**
-  - Schema de Entrada (`TopicoCreate`): `nome`, `publico`
-  - Schema de Saída (`TopicoResponse`): `id`, `nome`, `publico`
-
-- [ ] **Módulo: Instruções (Rotinas)**
-  - Schema de Entrada (`InstrucaoCreate`): `titulo`, `conteudo`, `nivel_acesso_id`, `url_apoio`
-  - Schema de Saída (`InstrucaoResponse`): `id`, `titulo`, `conteudo`, `data_atualizacao`, `data_criacao`, `nivel_acesso_id`, `usuario_id`, `usuario_atualizou_id`, `ativo`
-
-Inseri dados de testes em um novo arquivo (seed.py), juntamente com outro arquivo para testar as queries (testar_queries.py)
-Assim, é possível, em um script solto, importar os models e fazer queries que retornam dados reais do banco.
-
-### 📋 Autenticação e Autorização — Fase 3
-
-- Para essa fase, criei um arquivo (security.py) para a criação e validação de senhas e tokens. As senhas são trasnformadas em hash utilizando o bcrypt, evitando salvá-las em texto puro no banco de dados
-
-- A rota de login foi feita utilizando JWT, pois economiza o armazenamento de dados em memória
-
-- Criei uma identificação do usuário para proteger rotas
-
-- Adicionada uma lógica que exibe as instruções conforme o nível de acesso
-
-- Apenas administradores conseguem criar, atualizar e deletar instruções, enquanto servidores e administradores têm acesso total à leitura.
-
-- O visitante anônimo só consegue ler as instruções do seu nível
-
-Agora é possível provar, testando, que um usuário sem login não acessa conteúdo restrito, e que tentar editar uma instrução sem estar logado retorna erro 403.
-
-### 📋 CRUD de instruções — Fase 4
-
-Para essa fase, comecei implementando queries de busca no arquivo crud.py para serem utilizadas na main.py
-
-Algumas das rotas feitas por enquanto: 
-
-- GET /instrucoes para listar as instruções respeitando o nível de acesso
-
-- GET /instrucoes/{instruction_id} para buscar uma instrução específica
-
-- POST /instrucoes para administradores criarem novas instruções
-
-- PUT /instrucoes/{instruction_id} para administradores atualizarem instruções
-
-- DELETE /instrucoes/{instruction_id} para administradores deletarem instruções. O delete só remove o estado ativo da função, não removendo fisicamente
-
+* [x] **Tratamento de Erros:** Exceções HTTP e checagem de integridade adicionadas para garantir respostas limpas (como `404 Not Found` para registros ausentes).

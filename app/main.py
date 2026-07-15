@@ -27,8 +27,8 @@ def get_current_user(
     """
     Dependência que identifica quem é o usuário atual (se houver um)
 
-    Verifica a validade do token. Caso não haja um, o usuário possui acesso público
-    Caso haja um token, verifica-o e capta o usuário atual
+    Verifica a validade do token. Caso não haja um, o usuário possui acesso público.
+    Caso haja um token, verifica-o e capta o usuário atual.
     """
     if token is None:
         return None
@@ -83,6 +83,29 @@ def login_for_access_token(
 # ====================================
 # ROTAS DE INSTRUÇÕES
 # ====================================
+@app.get(
+    "/instrucoes/busca",
+    response_model=list[schemas.InstrucaoResponse],
+    tags=["Instruções"],
+)
+def get_instruction_by_text(
+    q: str, db: Session = Depends(get_db), current_user=Depends(get_current_user)
+):
+    """
+    Realiza uma busca por instruções baseada em strings e no nível de acesso
+    do usuário.
+    Retorna uma lista de resultados, ou uma lista vazia, caso não encontre nenhuma instrução.
+    """
+    if current_user is None:
+        search_result = crud.text_search(q, 1, db)
+    else:
+        search_result = crud.text_search(q, 3, db)
+
+    if not search_result:
+        raise HTTPException(status_code=404, detail="Nenhum resultado encontrado.")
+    return search_result
+
+
 @app.get("/instrucoes", tags=["Instruções"])
 def show_instructions(
     db: Session = Depends(get_db),
@@ -272,7 +295,7 @@ def delete_a_topic(
 # ENTIDADES
 # ====================================
 @app.post("/instrucoes/{instruction_id}/topicos/{topic_id}", tags=["Relacionamentos"])
-def link_entities(
+def link_instruction_topic(
     instruction_id: int,
     topic_id: int,
     db: Session = Depends(get_db),
@@ -286,12 +309,18 @@ def link_entities(
     if current_user is None or current_user.nivel_acesso_id != 3:
         raise HTTPException(status_code=403, detail="Usuário não autorizado")
 
-    crud.link_topics_to_instructions(instruction_id, topic_id, db)
+    instruction_topic = crud.link_topics_to_instructions(instruction_id, topic_id, db)
+
+    if instruction_topic is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Não foi possível realizar a associação: ID da instrução ou do tópico é inválido",
+        )
     return {"status": "Associação realizada com sucesso!"}
 
 
 @app.delete("/instrucoes/{instruction_id}/topicos/{topic_id}", tags=["Relacionamentos"])
-def remove_link_entities(
+def remove_link_instruction_topic(
     instruction_id: int,
     topic_id: int,
     db: Session = Depends(get_db),
@@ -335,9 +364,16 @@ def search_instructions_by_topic(
     as instruções públicas (padrão). Se estiver autenticado, retorna o conteúdo completo.
     """
     if current_user is None:
-        return crud.find_instructions_by_topic(topic_id, db, True)
+        instructions = crud.find_instructions_by_topic(topic_id, db, True)
 
-    return crud.find_instructions_by_topic(topic_id, db, False)
+    else:
+        instructions = crud.find_instructions_by_topic(topic_id, db, False)
+
+    if not instructions:
+        raise HTTPException(
+            status_code=404, detail="Nenhuma instrução encontrada para este tópico."
+        )
+    return instructions
 
 
 @app.post("/instrucoes/{instruction_id}/midias/{media_id}", tags=["Relacionamentos"])
@@ -361,11 +397,33 @@ def link_existing_media(
         )
         # Caso não nencontre a mídia ou a instrução
         if not media_instruction:
-            raise HTTPException(status_code=404, detail="Dado não encontrado")
+            raise HTTPException(status_code=404, detail="Dado não encontrado.")
 
         return {"status": "Mídia anexada com sucesso!"}
     except IntegrityError:
-        raise HTTPException(status_code=400, detail="Mídia já vinculada à instrução")
+        raise HTTPException(status_code=400, detail="Mídia já vinculada à instrução.")
+
+
+@app.delete("/instrucoes/{instruction_id}/midias/{media_id}", tags=["Relacionamentos"])
+def delete_link_instruction_media(
+    instruction_id: int,
+    media_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """
+    Remove uma mídia de uma instrução.
+
+    Acesso restrito aos administradores.
+    """
+    if current_user is None or current_user.nivel_acesso_id != 3:
+        raise HTTPException(status_code=403, detail="Usuário não autorizado.")
+
+    media_instruction = crud.delete_media_from_instruction(instruction_id, media_id, db)
+    if not media_instruction:
+        raise HTTPException(status_code=404, detail="Mídia não vinculada à instrução.")
+
+    return {"status": "Mídia removida com sucesso!"}
 
 
 # ====================================

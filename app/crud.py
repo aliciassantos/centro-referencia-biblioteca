@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app import models, schemas, database
 
 
@@ -50,6 +50,31 @@ def get_instruction_by_access_level(db: Session, level_access_id: int):
     else:
         return db.scalars(
             select(models.Instrucao).where(models.Instrucao.ativo == True)
+        ).all()
+
+
+def text_search(query: str, access_level: int, db: Session):
+    """
+    Busca por instruções utilizando strings.
+    Retorna as intruções baseado no nível de acesso do usuário.
+    Utiliza um índice FULLTEXT (titulo, conteudo) para a busca.
+    """
+    if access_level == 1:
+        return db.scalars(
+            select(models.Instrucao).where(
+                (models.Instrucao.titulo.match(query))
+                | (models.Instrucao.conteudo.match(query)),
+                models.Instrucao.ativo == True,
+                models.Instrucao.nivel_acesso_id == 1,
+            )
+        ).all()
+    else:
+        return db.scalars(
+            select(models.Instrucao).where(
+                (models.Instrucao.titulo.match(query))
+                | (models.Instrucao.conteudo.match(query)),
+                models.Instrucao.ativo == True,
+            )
         ).all()
 
 
@@ -185,6 +210,7 @@ def delete_an_topic(topic_id: int, db: Session):
         return None
 
     # Remove o tópico e salva as alterações
+    db.delete(topic_to_be_deleted)
     db.commit()
     return topic_to_be_deleted
 
@@ -193,9 +219,19 @@ def delete_an_topic(topic_id: int, db: Session):
 # RELACIONAMENTO ENTRE
 # ENTIDADES
 # ====================================
-# Relaciona um tópico a uma instrução
 def link_topics_to_instructions(instruction_id: int, topic_id: int, db: Session):
-    # Instancia o novo relacionamento
+    """
+    Vincula um tópico a uma instrução.
+
+    Retorna um objeto do tipo InstrucaoTopico, caso existam os IDs das entidades,
+    e None, caso contrário.
+    """
+    instruction = search_item_by_id(models.Instrucao, instruction_id, db)
+    topic = search_item_by_id(models.Topico, topic_id, db)
+
+    if not instruction or not topic:
+        return None
+
     instruction_topic = models.InstrucaoTopico(
         instrucao_id=instruction_id, topico_id=topic_id
     )
@@ -203,11 +239,17 @@ def link_topics_to_instructions(instruction_id: int, topic_id: int, db: Session)
     db.add(instruction_topic)
     db.commit()
     db.refresh(instruction_topic)
+    return instruction_topic
 
 
-# Remove o relacionamento entre um tópico e uma instrução
 def delete_link_topics_instructions(instruction_id: int, topic_id: int, db: Session):
     # Busca o relacionamento
+    """
+    Desvincula um tópico de uma instrução.
+
+    Retorna um objeto do tipo InstrucaoTopico caso
+    uma relação entre eles seja encontrada, e None, caso contrário.
+    """
     instruction_topic = db.scalars(
         select(models.InstrucaoTopico).where(
             models.InstrucaoTopico.instrucao_id == instruction_id,
@@ -217,14 +259,21 @@ def delete_link_topics_instructions(instruction_id: int, topic_id: int, db: Sess
 
     if not instruction_topic:
         return None
-    # Remove a instrução e salva as alterações
+
     db.delete(instruction_topic)
     db.commit()
+    return instruction_topic
 
 
-# Procura instruções filtrando por tópicos
 def find_instructions_by_topic(topic_id: int, db: Session, is_public: bool):
-    # Exibe as instruções de tópicos públicos
+    """
+    Procura instruções filtrando por tópicos.
+
+    Caso o usuário seja anônimo, o filtro é utilizado através de tópicos públicos, retornando
+    apenas instruções de acesso livre.
+    Se o usuário for um servidor logado, é possível filtrar
+    todas as instruções por todos os tópicos.
+    """
     if is_public is True:
         return db.scalars(
             select(models.Instrucao)
@@ -235,7 +284,6 @@ def find_instructions_by_topic(topic_id: int, db: Session, is_public: bool):
                 models.Topico.publico == is_public,
             )
         ).all()
-    # Exibe todos os tópicos e, consequentemente, todas as instruções
     else:
         return db.scalars(
             select(models.Instrucao)
@@ -247,17 +295,21 @@ def find_instructions_by_topic(topic_id: int, db: Session, is_public: bool):
         ).all()
 
 
-# Anexa uma mídia a uma instrução
 def link_media_to_instruction(
     media_id: int, instruction_id: int, display_order: int, db: Session
 ):
+    """
+    Anexa uma mídia existente no banco de dados a uma instrução.
+
+    Retorna um objeto do tipo InstrucaoMidia, ou None, caso os IDs inseridos não
+    existam no banco.
+    """
     media = search_item_by_id(models.Midia, media_id, db)
     instruction = search_item_by_id(models.Instrucao, instruction_id, db)
 
     if not media or not instruction:
         return None
 
-    # Instancia uma nova associação e adiciona ao banco
     media_instruction = models.InstrucaoMidia(
         instrucao_id=instruction_id, midia_id=media_id, ordem_exibicao=display_order
     )
@@ -265,17 +317,48 @@ def link_media_to_instruction(
     db.add(media_instruction)
     db.commit()
     db.refresh(media_instruction)
+    return media_instruction
+
+
+def delete_media_from_instruction(instruction_id: int, media_id: int, db: Session):
+    """
+    Deleta uma mídia de uma instrução.
+
+    Retorna um objeto do tipo InstrucaoMidia, ou None, caso
+    não exista uma relação entre a instrução e a mídia inseridas.
+    """
+    instruction_media = db.scalars(
+        select(models.InstrucaoMidia).where(
+            models.InstrucaoMidia.instrucao_id == instruction_id,
+            models.InstrucaoMidia.midia_id == media_id,
+        )
+    ).first()
+
+    if not instruction_media:
+        return None
+
+    db.delete(instruction_media)
+    db.commit()
+    return instruction_media
 
 
 # ====================================
 # CRUD DE MÍDIAS
 # ====================================
-# Adiciona uma nova mídia e a vincula à sua respectiva instrução
 def add_new_midia(
     file_path: str, caption: str, instruction_id: int, display_order: int, db: Session
 ):
-    # Instancia uma nova mídia e adiciona ao banco
+    """
+    Insere a nova mídia no banco e, em seguida,
+    vincula-a na instrução em que está sendo utilizada.
+
+    Retorna um objeto do tipo Midia, ou None, caso a instrução não seja encontrada.
+    """
     new_media = models.Midia(caminho_arquivo=file_path, legenda=caption)
+
+    instruction = search_item_by_id(models.Instrucao, instruction_id, db)
+    if not instruction:
+        return None
 
     db.add(new_media)
     db.commit()
